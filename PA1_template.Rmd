@@ -2,19 +2,95 @@
 
 
 ## Loading and preprocessing the data
-
+```{r}
+data<-read.csv("activity.csv")
+#data$steps<-as.numeric(data$steps)
+summary(data)
+```
 
 
 ## What is mean total number of steps taken per day?
+### Calculating the media by day and plotting the histogram
+```{r fig.width=10}
+data2<-na.omit(data)
+mean_each_day<-tapply(data2$steps, data2$date, mean)
+
+hist(mean_each_day,main="Mean Steps by Day",xlab="Mean Each Day")
+```
+### Calculating the global media and median
+```{r}
+mean(mean_each_day,na.rm=TRUE)
+median(mean_each_day,na.rm=TRUE)
+
+```
 
 
 
 ## What is the average daily activity pattern?
+### Aggregating data by intervals and plotting
+```{r fig.width=10}
+mean_interval<-aggregate(data2$steps, by=list(data2$interval), 
+                    FUN=mean, na.rm=TRUE)
+colnames(mean_interval)<-c("interval","steps")
+plot(mean_interval$interval,mean_interval$steps,type="l",xlab="5-minute interval",ylab="Average All Days",main="Average Daily Activity Pattern")
+```
+### Getting and showing the max of steps in the media interval dataset
+```{r}
+max_interval<-mean_interval[which.max( mean_interval$steps ),]
+colnames(max_interval)<-c("Interval","Mean Steps")
+max_interval
 
-
-
+```
 ## Imputing missing values
+### Number of missing values
+```{r}
+sum(!complete.cases(data))
+```
+### Imputing missing values by replacing them with the the mean of the 5-minute interval
+### Steps
+- Get a case complete dataset
+- get the NA data set and replace the null values with the average of the given interval
+- Put the imputed dataset with the complete dataset
+- Show the characteristics of the new dataset (No NA's found)
+```{r}
+data_complete<-na.omit(data)
+data_incomplete<-data[is.na(data$steps),2:3]
+data_incomplete<- merge(data_incomplete,mean_interval,by="interval")
+data_complete <- rbind(data_complete, data_incomplete)
+str(data_complete)
+sum(!complete.cases(data_complete))
+```
+### Basic statistics and Histogram for the new dataset
 
+```{r fig.width=10}
+mean_each_day_complete<-tapply(data_complete$steps, data_complete$date, mean)
 
+hist(mean_each_day_complete,main="Mean Steps by Day",xlab="Mean Each Day")
+
+mean(mean_each_day_complete)
+median(mean_each_day_complete)
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+### Creating the new var day_of_week 
+```{r}
+Sys.setlocale("LC_TIME", "English")
+data_complete$day_of_week<-weekdays(as.Date(data_complete[,2]))
+data_complete$day_of_week[which(data_complete$day_of_week == "Sunday" | data_complete$day_of_week == "Saturday")]<-"weekend"
+data_complete$day_of_week[which(data_complete$day_of_week!="weekend")]<-"weekday"
+data_complete$day_of_week<-as.factor(data_complete$day_of_week)
+
+summary(data_complete)
+```
+## aggregating and Plotting the data
+
+```{r fig.width=10}
+mean_interval<-aggregate(data_complete$steps, by=list(data_complete$interval,data_complete$day_of_week),FUN=mean, na.rm=TRUE)
+
+colnames(mean_interval)<-c("interval","day_of_week","steps")
+
+library(lattice)
+xyplot(mean_interval$steps~as.numeric(mean_interval$interval)|mean_interval$day_of_week, layout = c(1, 2),type="l",xlab="Interval",ylab="Number of Steps") 
+
+
+```
